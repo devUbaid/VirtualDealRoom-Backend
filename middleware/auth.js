@@ -50,7 +50,7 @@ exports.authorize = (...roles) => {
   }
 }
 
-// Admin only middleware
+// Admin
 exports.adminOnly = (req, res, next) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({
