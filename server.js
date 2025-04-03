@@ -56,7 +56,7 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ Updated CORS Configuration
 app.use(
   cors({
-    origin: [process.env.CLIENT_URL || "http://localhost:3000"],
+    origin: ["https://virtualdealroom.vercel.app", "http://localhost:3000"], // Allow both production & local URLs
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
