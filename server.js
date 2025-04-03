@@ -1,4 +1,6 @@
-require("dotenv").config(); // Load environment variables at the top
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -7,7 +9,6 @@ const http = require("http");
 const socketIo = require("socket.io");
 const path = require("path");
 const Redis = require("ioredis");
-const connectRedis = require("connect-redis");
 const session = require("express-session");
 const morgan = require("morgan");
 const helmet = require("helmet");
@@ -30,20 +31,18 @@ const server = http.createServer(app);
 // Set up Socket.io
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: [process.env.CLIENT_URL, "http://localhost:3000"], // Allow frontend URLs
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   },
 });
 
 // Set up Redis client
 const RedisStore = require("connect-redis").default;
-
 const redisClient = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
 redisClient.on("error", (err) => {
   console.error("Redis error:", err);
-  setTimeout(() => redisClient.connect(), 5000); // Retry connection
 });
 
 redisClient.on("connect", () => {
@@ -53,20 +52,28 @@ redisClient.on("connect", () => {
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ Updated CORS Configuration
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: [process.env.CLIENT_URL || "http://localhost:3000"],
     credentials: true,
-  }),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
+
+// ✅ Handle Preflight Requests
+app.options("*", cors());
+
 app.use(helmet());
 app.use(morgan("dev"));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later",
+  max: 100,
+  message: "Too many requests, please try again later.",
 });
 app.use("/api/", limiter);
 
@@ -82,7 +89,7 @@ app.use(
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
-  }),
+  })
 );
 
 // Set up socket handler
@@ -104,12 +111,12 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Error handling middleware
+// ✅ Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     message: "Server Error",
-    error: process.env.NODE_ENV === "production" ? {} : err,
+    error: process.env.NODE_ENV === "production" ? {} : err.message,
   });
 });
 
